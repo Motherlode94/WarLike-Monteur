@@ -22,13 +22,13 @@ Toutes les vidéos sont traitées dans le navigateur. Aucun média n'est envoyé
 
 ## Limites importantes
 
-Le moteur actuel est un **éditeur de clips séquentiels**, pas encore une DAW vidéo professionnelle : une seule piste audio d’accompagnement, pas encore de pistes vidéo superposées, de transitions fondues, de mix audio multipiste complet, de proxies, de keyframes ou de rendu H.264/MP4 natif. La lecture MP4 dépend des codecs disponibles, mais l'export utilise WebM. Les performances dépendent fortement du navigateur, du matériel, de la mémoire et du format source. L'export se fait à vitesse réelle, doit rester au premier plan et peut échouer pour certains fichiers ou navigateurs. Les titres et les deux sources audio (son des vidéos + piste d’accompagnement) sont mélangés via Web Audio puis enregistrés par capture temps réel ; aucune stabilité audiovisuelle professionnelle n'est garantie.
+Le moteur actuel est un **éditeur de clips séquentiels**, pas encore une DAW vidéo professionnelle : une seule piste audio d’accompagnement, pas encore de pistes vidéo superposées, de transitions fondues, de mix audio multipiste complet, de proxies, d'animations avancées multi-images clés ou de rendu H.264/MP4 natif. La lecture MP4 dépend des codecs disponibles, mais l'export utilise WebM. Les performances dépendent fortement du navigateur, du matériel, de la mémoire et du format source. L'export se fait à vitesse réelle, doit rester au premier plan et peut échouer pour certains fichiers ou navigateurs. Les titres et les deux sources audio (son des vidéos + piste d’accompagnement) sont mélangés via Web Audio puis enregistrés par capture temps réel ; aucune stabilité audiovisuelle professionnelle n'est garantie.
 
 **Validation actuelle :** syntaxe JavaScript vérifiée et tous les identifiants de l'interface référencés sont présents. Tests de montage, lecture et export vidéo réels en navigateur restant à effectuer. Le déploiement Cloudflare nécessite un projet Pages connecté au dépôt.
 
 ## Suite
 
-Prochaines étapes : montage multipiste (vidéo/voix/musique), transitions, images clés, formes d'onde, miniatures des clips, pistes audio séparées, correction couleur, sous-titres et moteur de rendu plus robuste.
+Prochaines étapes : véritable montage vidéo multipiste, transitions, courbes d'animation et davantage d'images clés, formes d'onde, miniatures des clips, sous-titres et moteur de rendu plus robuste.
 
 ## Mise à jour audio et contrôle du montage
 
@@ -59,3 +59,17 @@ npm run test:export
 ```
 
 L'existence du test **ne vaut pas preuve qu'il a réussi** : examiner le statut du workflow dans GitHub Actions. Les résultats d'exécution du navigateur et le fichier exporté n'ont pas encore été récupérés et contrôlés dans cette session.
+
+## Couleurs, compositing et animation — mise à jour
+
+Inspiré des **workflows** de montage et compositing professionnels, sans reprendre leur code ou leurs interfaces propriétaires :
+
+- **Étalonnage par clip** : luminosité, contraste, saturation et température simulée, avec presets neutre, cinéma chaud, nuit froide, noir et blanc, couleurs vives.
+- **Animations de transformation** : deux images clés par clip (début et fin) pour l'échelle, la position X/Y, la rotation et l'opacité ; interpolation linéaire à la lecture et à l'export.
+- **Rendu partagé** : `compositing.js` centralise la normalisation des réglages, les filtres et le dessin sur canvas ; la prévisualisation utilise les équivalents CSS.
+- **Coupes animées** : en divisant un clip, chaque portion conserve une animation recalculée à son point de coupe.
+- **Compatibilité projets** : les anciens clips sans `effects` reçoivent des valeurs neutres ; les nouveaux réglages sont sauvegardés en JSON et annulables.
+
+**Ce n'est pas encore un équivalent de Premiere Pro ou After Effects** : pas de compositing vidéo multi-couches, de masques, de suivi de mouvement ou de moteur d'effets temps réel professionnel. La température est une approximation par filtres navigateur, pas un réglage colorimétrique étalonné.
+
+Tests : `npm run test:unit` contrôle les valeurs par défaut, les limites et l'interpolation. GitHub Actions lance ces tests avant le test de rendu WebM. Les calculs du module ont été exécutés dans un environnement JavaScript isolé avec résultats conformes ; les tests du navigateur et du rendu final restent à confirmer sur un navigateur réel.
