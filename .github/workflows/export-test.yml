@@ -1,0 +1,29 @@
+name: Validate video and audio export
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  real-webm-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test real WebM export
+        run: npm run test:export
+      - name: Upload diagnostics if test fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-report
+          path: test-results/
+          if-no-files-found: ignore
