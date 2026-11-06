@@ -43,3 +43,19 @@ Pour annuler les découpes et déplacements de clips, utiliser les boutons Annul
 3. Couper le son original, annuler/rétablir, sauvegarder en JSON, réimporter les médias et restaurer le projet.
 4. Exporter un WebM avec audio et titres, puis contrôler durée, synchronisation et lecture du fichier sur un autre lecteur.
 5. Tester sur mobile à 375 px, sur Chrome et Edge, et sur un navigateur ne supportant pas `MediaRecorder` WebM.
+
+## Validation de l'export audio + vidéo
+
+La sortie WebM est générée par `MediaRecorder` en capturant la vidéo d'un canvas et le mix Web Audio des sons vidéo + musique indépendante. Avant de proposer le fichier au téléchargement, l'application essaie maintenant de le rouvrir dans un décodeur vidéo HTML5 et exige des dimensions vidéo valides. **Ce contrôle ne garantit pas qu'une piste audio soit présente ou audible.**
+
+Test de régression ajouté dans `tests/export.spec.mjs` : génération de deux vrais clips VP9 de couleurs différentes et d'une musique WAV (FFmpeg), lancement de Chromium (Playwright), export d'un WebM, contrôle de la piste vidéo et de la piste audio avec `ffprobe`, puis vérification du niveau audio non silencieux avec `ffmpeg volumedetect`. Le workflow `.github/workflows/export-test.yml` est prévu pour l'exécuter à chaque push sur `main`.
+
+Commandes locales (Node.js 22+, Python 3 et FFmpeg disponibles) :
+
+```sh
+npm install
+npx playwright install chromium
+npm run test:export
+```
+
+L'existence du test **ne vaut pas preuve qu'il a réussi** : examiner le statut du workflow dans GitHub Actions. Les résultats d'exécution du navigateur et le fichier exporté n'ont pas encore été récupérés et contrôlés dans cette session.
