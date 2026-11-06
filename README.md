@@ -8,9 +8,11 @@
 - Timeline de montage séquentielle avec plusieurs clips, réorganisation, suppression et coupe à la tête de lecture.
 - Points d'entrée et de sortie ajustables, prévisualisation et navigation.
 - Titres superposés (haut, centre, bas), couleur et volume par clip.
+- Une piste audio indépendante pour musique ou voix (fichiers MP3/WAV/OGG compatibles), réglage du décalage et du volume, possibilité de couper le son original des vidéos.
+- Annuler / rétablir pour les opérations de montage de clips, sélection de piste audio et réglage de son décalage (60 états d’historique maximum).
 - Formats de sortie 16:9, 9:16 et 1:1 ; résolutions 480p, 720p et 1080p.
 - Export WebM via `canvas.captureStream()`, Web Audio et `MediaRecorder`, à vitesse réelle et jusqu'à 30 minutes de montage.
-- Projet JSON exportable et réimportable **après avoir réimporté les mêmes médias locaux**. Les fichiers vidéo ne sont pas inclus dans le JSON.
+- Projet JSON exportable et réimportable **après avoir réimporté les mêmes médias locaux**. Les fichiers vidéo et audio ne sont pas inclus dans le JSON. Le projet mémorise la piste audio et son positionnement.
 
 ## Démarrage
 
@@ -20,10 +22,24 @@ Toutes les vidéos sont traitées dans le navigateur. Aucun média n'est envoyé
 
 ## Limites importantes
 
-Le moteur actuel est un **éditeur de clips séquentiels**, pas encore une DAW vidéo professionnelle : pas de pistes superposées, de transitions fondues, de mix audio multipiste indépendant, de proxies, de keyframes ou de rendu H.264/MP4 natif. La lecture MP4 dépend des codecs disponibles, mais l'export utilise WebM. Les performances dépendent fortement du navigateur, du matériel, de la mémoire et du format source. L'export se fait à vitesse réelle, doit rester au premier plan et peut échouer pour certains fichiers ou navigateurs. Les titres et l'audio sont enregistrés par capture temps réel ; aucune stabilité audiovisuelle professionnelle n'est garantie.
+Le moteur actuel est un **éditeur de clips séquentiels**, pas encore une DAW vidéo professionnelle : une seule piste audio d’accompagnement, pas encore de pistes vidéo superposées, de transitions fondues, de mix audio multipiste complet, de proxies, de keyframes ou de rendu H.264/MP4 natif. La lecture MP4 dépend des codecs disponibles, mais l'export utilise WebM. Les performances dépendent fortement du navigateur, du matériel, de la mémoire et du format source. L'export se fait à vitesse réelle, doit rester au premier plan et peut échouer pour certains fichiers ou navigateurs. Les titres et les deux sources audio (son des vidéos + piste d’accompagnement) sont mélangés via Web Audio puis enregistrés par capture temps réel ; aucune stabilité audiovisuelle professionnelle n'est garantie.
 
 **Validation actuelle :** syntaxe JavaScript vérifiée et tous les identifiants de l'interface référencés sont présents. Tests de montage, lecture et export vidéo réels en navigateur restant à effectuer. Le déploiement Cloudflare nécessite un projet Pages connecté au dépôt.
 
 ## Suite
 
 Prochaines étapes : montage multipiste (vidéo/voix/musique), transitions, images clés, formes d'onde, miniatures des clips, pistes audio séparées, correction couleur, sous-titres et moteur de rendu plus robuste.
+
+## Mise à jour audio et contrôle du montage
+
+Importe d'abord des vidéos, puis un fichier de musique ou de voix dans la section Médias. Ajoute la piste audio en cliquant sur son nom dans la timeline. Tu peux déplacer le début du morceau et ajuster son volume, ainsi que désactiver le son original des vidéos. L'export WebM mélange les deux sources via des `GainNode` avant l'encodage.
+
+Pour annuler les découpes et déplacements de clips, utiliser les boutons Annuler/Rétablir. L'historique est en mémoire et ne persiste pas après fermeture. **L'export audio/vidéo doit être validé dans un navigateur réel**, y compris pour la synchronisation des coupes, les vidéos longues et les codecs.
+
+### Scénarios QA à vérifier sur appareil
+
+1. Importer deux vidéos et une piste audio, puis découper et réordonner les vidéos.
+2. Régler le décalage de la musique, écouter la jonction des deux vidéos et vérifier le volume.
+3. Couper le son original, annuler/rétablir, sauvegarder en JSON, réimporter les médias et restaurer le projet.
+4. Exporter un WebM avec audio et titres, puis contrôler durée, synchronisation et lecture du fichier sur un autre lecteur.
+5. Tester sur mobile à 375 px, sur Chrome et Edge, et sur un navigateur ne supportant pas `MediaRecorder` WebM.
