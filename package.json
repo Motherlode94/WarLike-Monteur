@@ -1,0 +1,8 @@
+{
+  "name":"warlike-monteur",
+  "private":true,
+  "version":"0.2.1",
+  "type":"module",
+  "scripts":{"test:export":"playwright test --config=playwright.config.mjs"},
+  "devDependencies":{"@playwright/test":"^1.58.0"}
+}
