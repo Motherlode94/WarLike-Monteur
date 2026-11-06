@@ -73,3 +73,9 @@ Inspiré des **workflows** de montage et compositing professionnels, sans repren
 **Ce n'est pas encore un équivalent de Premiere Pro ou After Effects** : pas de compositing vidéo multi-couches, de masques, de suivi de mouvement ou de moteur d'effets temps réel professionnel. La température est une approximation par filtres navigateur, pas un réglage colorimétrique étalonné.
 
 Tests : `npm run test:unit` contrôle les valeurs par défaut, les limites et l'interpolation. GitHub Actions lance ces tests avant le test de rendu WebM. Les calculs du module ont été exécutés dans un environnement JavaScript isolé avec résultats conformes ; les tests du navigateur et du rendu final restent à confirmer sur un navigateur réel.
+
+## WarLike Node — Import d'effets compatibles
+
+Dans l'inspecteur du clip sélectionné, utiliser **Importer un effet WarLike Node** pour charger le fichier `warlike-node-effect.json` exporté par WarLike Node. L'adaptateur `node-bridge.js` valide un graphe linéaire de traitement d'image et convertit les opérations `brightness`, `contrast`, `saturation`, `grayscale` en valeurs de correction couleur Monteur. Les réglages sont appliqués au clip, enregistrés dans le projet et annulables. Les graphes multicouches, les masques, les shaders GPU, les vidéos intégrées et les keyframes des nœuds ne peuvent pas encore être reproduits par cet adaptateur et sont refusés. Les médias Node ne sont pas transférés.
+
+`npm run test:unit` inclut des tests de compatibilité du format d'échange.
