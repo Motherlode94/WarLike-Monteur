@@ -10,3 +10,19 @@
 .audio-mute{display:flex!important;align-items:center;gap:9px;cursor:pointer}
 .audio-mute input{width:19px;height:19px;accent-color:#b4c9f5}
 @media(max-width:780px){.audio-lane{padding:12px}.audio-clips{grid-template-columns:1fr}}
+
+/* WarLike compositing / grading inspector */
+.effects-panel{margin:20px 0 10px;padding:14px;background:#111a29;border:1px solid #465a74;border-radius:10px}
+.effects-panel h3{font-size:14px;color:#cfe1ff;margin:18px 0 7px}
+.effects-panel h3:first-child{margin-top:0}
+.effects-panel .hint{font-size:11px}
+.effects-panel label{margin:13px 0;display:block}
+.effects-panel input[type="range"]{width:100%;display:block;margin:9px 0 2px}
+.effects-panel output{font-variant-numeric:tabular-nums;color:#b6d4ff;font-size:11px}
+.effects-panel input[type="number"]{width:100%}
+.kf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:13px 0}
+.kf-tabs button{min-width:0;font-size:12px}
+.kf-tabs button[aria-pressed="true"]{background:#395d7d;border-color:#a9caff;color:#fff}
+.effects-panel .inspect-actions button{flex:1}
+@media(max-width:1150px){.effects-panel{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:14px;align-items:end}.effects-panel h3,.effects-panel .hint,.effects-panel .kf-tabs,.effects-panel .inspect-actions{grid-column:1/-1}}
+@media(max-width:650px){.effects-panel{display:block;padding:12px}.kf-tabs{grid-template-columns:1fr 1fr}}
