@@ -70,9 +70,8 @@ const gradeKeys=['brightness','contrast','saturation','warmth'];
 for(const key of gradeKeys){
  const name='fx'+key[0].toUpperCase()+key.slice(1);
  const node=$(name);let before=null;
- node.addEventListener('pointerdown',()=>{if(clips[selection]&&!exporting)before=snapshot();});
- node.addEventListener('input',()=>{const clip=clips[selection];if(!clip||exporting)return;clip.effects=normalizeEffects(clip.effects);clip.effects.grade[key]=Number(node.value);$(name+'Value').textContent=node.value+(key==='warmth'?'':' %');updateVideoEffects();});
- node.addEventListener('change',()=>{const clip=clips[selection];if(!clip||exporting)return;if(before){undoStack.push(before);if(undoStack.length>60)undoStack.shift();redoStack.length=0;before=null;historyButtons();}else checkpoint();clip.effects=normalizeEffects(clip.effects);clip.effects.grade[key]=Number(node.value);updateVideoEffects();});
+ node.addEventListener('input',()=>{const clip=clips[selection];if(!clip||exporting)return;if(!before)before=snapshot();clip.effects=normalizeEffects(clip.effects);clip.effects.grade[key]=Number(node.value);$(name+'Value').textContent=node.value+(key==='warmth'?'':' %');updateVideoEffects();});
+ node.addEventListener('change',()=>{const clip=clips[selection];if(!clip||exporting){before=null;return;}if(before){undoStack.push(before);if(undoStack.length>60)undoStack.shift();redoStack.length=0;before=null;historyButtons();}else checkpoint();clip.effects=normalizeEffects(clip.effects);clip.effects.grade[key]=Number(node.value);updateVideoEffects();});
 }
 $('fxPreset').onchange=e=>{const clip=clips[selection];if(!clip||exporting)return;checkpoint();clip.effects=normalizeEffects(clip.effects);clip.effects.grade={...PRESETS[e.target.value]};showEffectValues(clip);updateVideoEffects();};
 $('kfStart').onclick=()=>{keyframeSide='start';showEffectValues(clips[selection]);};
