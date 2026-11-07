@@ -38,7 +38,11 @@ test('exports two real video clips with a separately imported audible audio trac
   await page.locator('#resolution').selectOption('480');
   const downloadPromise=page.waitForEvent('download',{timeout:85000});
   await page.locator('#exportVideo').click();
-  const download=await downloadPromise;
+  const download=await downloadPromise.catch(async error=>{
+   const status=await page.locator('#status').textContent().catch(()=>'(statut inaccessible)');
+   const mode=await page.locator('#mode').textContent().catch(()=>'(mode inaccessible)');
+   throw Error('Export WebM sans téléchargement : '+status+' | mode='+mode+' | page errors='+JSON.stringify(errors)+' | '+error.message);
+  });
   await download.saveAs(join(dir,'render.webm'));
   await expect(page.locator('#status')).toContainText('Export WebM terminé');
   expect(errors).toEqual([]);
