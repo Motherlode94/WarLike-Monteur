@@ -19,7 +19,7 @@ function restoreSnapshot(state){playing=false;video.pause();music.pause();clips.
 function historyMove(from,to){if(exporting||!from.length)return;to.push(snapshot());restoreSnapshot(from.pop());historyButtons();}
 $('undo').onclick=()=>historyMove(undoStack,redoStack);$('redo').onclick=()=>historyMove(redoStack,undoStack);
 function audioAsset(){return audioAssets.find(a=>a.id===audioTrack?.assetId)||null;}
-function updateGain(){const base=Number($('volume').value)/100,clip=clips[active],source=$('muteOriginal').checked?0:(clip?.volume??100)/100*base,bed=(audioTrack?.volume??70)/100*base;if(videoGain){videoGain.gain.value=source;video.volume=1;}else video.volume=source;if(musicGain){musicGain.gain.value=bed;music.volume=1;}else music.volume=bed;syncExtraAudio(clock,playing);}
+function updateGain(){const base=Number($('volume').value)/100,clip=clips[active],source=$('muteOriginal').checked?0:(clip?.volume??100)/100*base,bed=(audioTrack?.volume??70)/100*base;if(videoGain){videoGain.gain.value=source;video.volume=1;}else video.volume=source;if(musicGain){musicGain.gain.value=bed;music.volume=1;}else music.volume=bed;}
 function syncPrimaryAudio(position,run=false){const asset=audioAsset();if(!asset||position<audioTrack.offset||position>=audioTrack.offset+asset.duration||position>=duration){music.pause();return;}const intended=position-audioTrack.offset;if(music.dataset.asset!==asset.id){music.pause();music.src=asset.url;music.dataset.asset=asset.id;music.load();}if(music.readyState>=1&&Math.abs(music.currentTime-intended)>.25)try{music.currentTime=intended;}catch{}if(run&&music.paused)music.play().catch(()=>status('Piste audio indisponible.'));else if(!run)music.pause();updateGain();}
 
 function ensureExtraPlayer(track){
@@ -176,7 +176,7 @@ function renderAudio(){
   const offset=document.createElement('input');offset.type='number';offset.min='0';offset.max=String(duration);offset.step='0.1';offset.value=String(track.offset);offset.setAttribute('aria-label','Début de '+label.textContent);
   offset.onchange=()=>{const n=Number(offset.value);if(!Number.isFinite(n)||n<0||n>duration)return renderAudio();checkpoint();track.offset=n;audioSync(clock,playing);};
   const vol=document.createElement('input');vol.type='range';vol.min='0';vol.max='100';vol.value=String(track.volume);vol.setAttribute('aria-label','Volume de '+label.textContent);
-  vol.oninput=()=>{track.volume=Number(vol.value);audioSync(clock,playing);};
+  vol.oninput=()=>{track.volume=Number(vol.value);syncExtraAudio(clock,playing);};
   const mute=document.createElement('button');mute.type='button';mute.textContent=track.muted?'Réactiver':'Muet';mute.onclick=()=>{checkpoint();track.muted=!track.muted;audioSync(clock,playing);renderAudio();};
   const remove=document.createElement('button');remove.type='button';remove.textContent='Supprimer la piste';remove.onclick=()=>{checkpoint();extraAudioTracks=extraAudioTracks.filter(t=>t.id!==track.id);syncExtraAudio(clock,false);renderAudio();};
   for(const el of [offset,vol,mute,remove])el.disabled=exporting;
