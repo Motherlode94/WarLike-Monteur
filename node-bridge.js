@@ -29,3 +29,36 @@ export function readNodeGrade(envelope){
  }
  return grade;
 }
+
+/**
+ * Read and preserve a complete Node graph for project round-tripping.
+ * A stored graph is NOT automatically renderable by Monteur; consumers must
+ * explicitly check previewSupported before claiming visual parity.
+ */
+export function readNodeGraph(envelope){
+ if(envelope?.format!=='warlike-node-effect'||envelope.version!==1)throw Error('Format effet Node incompatible.');
+ const graph=envelope.graph;
+ if(!graph||graph.schema!=='warlike-node-v2'||!Array.isArray(graph.nodes)||!Array.isArray(graph.edges)||graph.nodes.length>60||graph.edges.length>120)throw Error('Graphe Node invalide.');
+ const ids=new Set();
+ for(const n of graph.nodes){
+  if(!n||typeof n.id!=='string'||!n.id||n.id.length>80||typeof n.type!=='string'||n.type.length>40||ids.has(n.id))throw Error('Identifiant de nœud invalide.');
+  ids.add(n.id);
+  if(!n.params||typeof n.params!=='object'||Array.isArray(n.params)||!n.keyframes||typeof n.keyframes!=='object'||Array.isArray(n.keyframes))throw Error('Paramètres de nœud invalides.');
+  for(const seq of Object.values(n.keyframes)){
+   if(!Array.isArray(seq)||seq.length>100||seq.some(k=>!k||!Number.isFinite(k.t)||!Number.isFinite(k.value)||k.t<0||k.t>3600||!['linear','smooth','hold'].includes(k.easing)))throw Error('Animation Node invalide.');
+  }
+ }
+ const inputs=new Set();
+ for(const e of graph.edges){
+  if(!e||!ids.has(e.from)||!ids.has(e.to)||e.from===e.to||typeof e.input!=='string')throw Error('Connexion Node invalide.');
+  const key=e.to+':'+e.input;
+  if(inputs.has(key))throw Error('Port déjà utilisé.');
+  inputs.add(key);
+ }
+ const byId=new Map(graph.nodes.map(n=>[n.id,n])),visiting=new Set(),visited=new Set();
+ function walk(id){if(visiting.has(id))throw Error('Cycle Node interdit.');if(visited.has(id))return;visiting.add(id);for(const edge of graph.edges)if(edge.to===id)walk(edge.from);visiting.delete(id);visited.add(id);}
+ for(const id of ids)walk(id);
+ let grade=null;
+ try{grade=readNodeGrade(envelope);}catch{}
+ return {envelope:structuredClone(envelope),grade,previewSupported:grade!==null,requiresLocalMedia:graph.nodes.some(n=>['source','video'].includes(n.type))};
+}
