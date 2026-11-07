@@ -52,7 +52,7 @@ function metadata(url){return new Promise((resolve,reject)=>{const probe=documen
 function getFormat(){const [w,h]=$('aspect').value.split(':').map(Number);const max=Number($('resolution').value);return w>=h?{width:Math.round(max*w/h/2)*2,height:max}:{width:max,height:Math.round(max*h/w/2)*2};}
 function paintTitle(clip){overlay.textContent=clip?.title||'';overlay.style.color=clip?.color||'#fff';overlay.className='title-overlay pos-'+(clip?.position||'bottom');}
 function updateVideoEffects(){
- const clip=clips[active];if(!clip){video.style.filter='none';video.style.transform='none';video.style.opacity='1';return;}
+ const clip=clips[active];if(!clip){video.style.filter='none';video.style.transform='none';video.style.opacity='1';$('nodePreviewCanvas').hidden=true;return;}
  const progress=Math.max(0,Math.min(1,(video.currentTime-clip.start)/Math.max(.01,length(clip))));
  const motion=motionAt(clip.effects,progress),effects=normalizeEffects(clip.effects);
  video.style.filter=cssFilter(effects.grade);
@@ -87,7 +87,7 @@ async function setClip(index,offset=0,autoplay=false){const clip=clips[index],as
  }finally{switching=false;}
  if(autoplay)await video.play();
 }
-async function seek(position){if(exporting)return;clock=clamp(position,0,duration);const row=boundaries().find(b=>clock<b.end-.0001)||boundaries().at(-1);if(!row){video.pause();music.pause();video.style.filter='none';video.style.transform='none';video.style.opacity='1';video.removeAttribute('src');video.load();active=-1;paintTitle(null);updateClock();return;}playing=false;video.pause();audioSync(clock,false);try{await setClip(row.index,clock-row.start,false);}catch(e){status(e.message);}updateVideoEffects();updateClock();}
+async function seek(position){if(exporting)return;clock=clamp(position,0,duration);const row=boundaries().find(b=>clock<b.end-.0001)||boundaries().at(-1);if(!row){video.pause();music.pause();pauseExtraTracks();$('nodePreviewCanvas').hidden=true;video.style.filter='none';video.style.transform='none';video.style.opacity='1';video.removeAttribute('src');video.load();active=-1;paintTitle(null);updateClock();return;}playing=false;video.pause();audioSync(clock,false);try{await setClip(row.index,clock-row.start,false);}catch(e){status(e.message);}updateVideoEffects();updateClock();}
 function nextFrom(index){const b=boundaries();return b[index+1]||null;}
 async function stepPlayback(){if(!playing||switching||exporting)return;const row=boundaries()[active];if(!row)return;clock=clamp(row.start+video.currentTime-row.clip.start,0,duration);audioSync(clock,true);updateVideoEffects();if(video.currentTime>=row.clip.end-.055||video.ended){const next=nextFrom(active);if(next){try{await setClip(next.index,0,true);}catch(e){playing=false;status('Lecture interrompue : '+e.message);}}else{playing=false;video.pause();music.pause();pauseExtraTracks();clock=duration;}}updateClock();}
 video.addEventListener('timeupdate',stepPlayback);video.addEventListener('ended',stepPlayback);
