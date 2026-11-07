@@ -67,7 +67,42 @@ $('aspect').onchange=updateLayout;
 $('files').onchange=async e=>{const files=[...(e.target.files||[])];e.target.value='';if(exporting)return;let imported=0;for(const file of files){if(assets.length>=40){status('Limite de 40 fichiers.');break;}if(file.size>500*1048576){status('Fichier refusé (> 500 Mo) : '+file.name);continue;}const url=URL.createObjectURL(file);try{const seconds=await metadata(url);assets.push({id:id(),name:file.name,file,url,duration:seconds});imported++;}catch(err){URL.revokeObjectURL(url);status(file.name+' : '+err.message);}}if(imported){status(imported+' fichier(s) importé(s).');refresh();}};
 function editClip(property,value){const c=clips[selection],asset=assetFor(c);if(!c||!asset||exporting)return;checkpoint();const before={...c};if(property==='start'){c.start=clamp(Number(value),0,c.end-.1);}else if(property==='end'){c.end=clamp(Number(value),c.start+.1,asset.duration);}else c[property]=value;if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||length(c)<.09){Object.assign(c,before);status('Bornes de découpage invalides.');}refresh();paintTitle(clips[active]);updateGain();}
 for(const [field,prop] of [['trimStart','start'],['trimEnd','end'],['clipTitle','title'],['titlePosition','position'],['titleColor','color'],['clipVolume','volume']]){$(field).addEventListener('change',e=>editClip(prop,prop==='volume'?Number(e.target.value):e.target.value));}
-$('nodeEffectImport').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file||exporting)return;const clip=clips[selection];if(!clip)return status('Sélectionne un clip avant d’importer un effet Node.');try{if(file.size>500000)throw Error('Fichier trop volumineux.');const imported=readNodeGraph(JSON.parse(await file.text()));checkpoint();clip.nodeGraph=imported.envelope;if(imported.previewSupported){clip.effects=normalizeEffects(clip.effects);clip.effects.grade={...imported.grade};}showEffectValues(clip);updateVideoEffects();status(imported.previewSupported?'Correction couleur Node appliquée ; graphe intégral conservé dans le projet.':'Graphe Node complet conservé dans le projet (masques, composition et animations) ; rendu non pris en charge dans Monteur, aucun effet visuel appliqué.');}catch(err){status('Effet refusé : '+err.message);}};
+function applyNodeGraph(envelope){
+ const clip=clips[selection];if(!clip)throw Error('Sélectionne un clip avant d’appliquer l’effet Node.');
+ if(exporting)throw Error('Attends la fin de l’export vidéo.');
+ const imported=readNodeGraph(envelope);
+ checkpoint();clip.nodeGraph=imported.envelope;
+ if(imported.previewSupported){clip.effects=normalizeEffects(clip.effects);clip.effects.grade={...imported.grade};}
+ showEffectValues(clip);updateVideoEffects();
+ const detail=imported.previewSupported?'Correction couleur appliquée et graphe conservé.':'Graphe complexe conservé ; le rendu est non pris en charge et son export est bloqué.';
+ status(detail);return detail;
+}
+$('nodeEffectImport').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw Error('Fichier trop volumineux.');applyNodeGraph(JSON.parse(await file.text()));}catch(err){status('Effet refusé : '+err.message);}};
+let pendingNodeEffect=null;
+$('applyReceivedNode').onclick=()=>{
+ if(!pendingNodeEffect)return;
+ try{applyNodeGraph(pendingNodeEffect);pendingNodeEffect=null;$('applyReceivedNode').disabled=true;}
+ catch(e){status(e.message);}
+};
+const NODE_ORIGIN='https://warlike-node.pages.dev';
+const transferChannel=new URLSearchParams(location.search).get('nodeTransfer');
+if(transferChannel&&/^[a-f0-9]{40}$/.test(transferChannel)&&window.opener){
+ const notify=message=>window.opener?.postMessage({...message,channel:transferChannel},NODE_ORIGIN);
+ window.addEventListener('message',event=>{
+  if(event.origin!==NODE_ORIGIN||event.source!==window.opener||event.data?.channel!==transferChannel)return;
+  if(event.data.type==='warlike-node-ping-v1'){notify({type:'warlike-monteur-ready-v1'});return;}
+  if(event.data.type!=='warlike-node-transfer-v1')return;
+  try{
+   const effect=event.data.effect;
+   if(JSON.stringify(effect).length>500000)throw Error('Graphe trop volumineux.');
+   pendingNodeEffect=readNodeGraph(effect).envelope;
+   $('applyReceivedNode').disabled=false;
+   status('Graphe reçu depuis Node : sélectionne un clip puis clique sur « Appliquer effet Node reçu ». Aucun média n’a été transféré.');
+   notify({type:'warlike-monteur-imported-v1',ok:true,detail:'Sélectionne un clip et applique l’effet reçu.'});
+  }catch(error){status('Transfert Node refusé : '+error.message);notify({type:'warlike-monteur-imported-v1',ok:false,error:error.message});}
+ });
+ notify({type:'warlike-monteur-ready-v1'});
+}
 const gradeKeys=['brightness','contrast','saturation','warmth'];
 for(const key of gradeKeys){
  const name='fx'+key[0].toUpperCase()+key.slice(1);
