@@ -1,3 +1,17 @@
+
+## Intégration multipiste et WarLike Node — chantier novembre 2026
+
+- La timeline conserve la séquence vidéo principale et dispose désormais de **plusieurs pistes audio indépendantes** : démarrage décalé, volume, mute, suppression, lecture synchronisée et mixage Web Audio inclus dans l'export WebM. Les pistes sont sauvegardées dans le JSON du projet (les médias doivent toujours être réimportés).
+- L'import d'effet depuis WarLike Node conserve les graphes complets et rend via Canvas2D les graphes à **source unique** comportant luminosité, contraste, saturation, noir et blanc, flou, teinte, fusion, masque elliptique, chroma key et ajustement RGB. Les images clés numériques sont interpolées à l'instant du clip.
+- La prévisualisation utilise un canvas superposé. L'export WebM utilise le même compositeur. Les graphes inconnus ou avec plusieurs sources médias sont refusés avant export pour éviter de produire une vidéo incomplète.
+- Les sources multiples, les caches de médias entre applications, le montage **vidéo** multicouche, le rendu GPU généralisé, la synchronisation image par image sur machines lentes et l'export hors temps réel restent à développer. Le rendu Canvas2D à 1080p peut être coûteux.
+
+### Vérifications recommandées
+1. Importer deux vidéos, puis trois pistes audio ; régler différents débuts/volumes et couper la deuxième piste.
+2. Sauvegarder le projet JSON, réimporter tous les médias, rouvrir et vérifier les positions audio et le mute.
+3. Dans Node, produire un graphe à une source vidéo avec masque et animation, l'envoyer à Monteur, sélectionner un clip, appliquer, prévisualiser, puis exporter.
+4. Relire le WebM dans un lecteur indépendant et vérifier image, son et durée. Le résultat n'est **pas encore certifié** sans essais sur les navigateurs et machines cibles.
+
 # WarLike Monteur
 
 Éditeur vidéo **autonome** dans le navigateur, indépendant de WarLike Engine.
