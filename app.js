@@ -96,7 +96,7 @@ $('play').onclick=togglePlay;
 $('previous').onclick=()=>{if(!exporting&&clips.length)seek(boundaries()[Math.max(active,0)]?.start||0);};
 $('next').onclick=()=>{if(!exporting&&clips.length){const next=boundaries()[Math.min(Math.max(active+1,0),clips.length-1)];seek(next.start);}};
 $('scrub').oninput=e=>{if(duration)seek(Number(e.target.value)/1000*duration);};
-$('volume').oninput=updateGain;
+$('volume').oninput=()=>{updateGain();syncExtraAudio(clock,playing);};
 $('aspect').onchange=updateLayout;
 $('files').onchange=async e=>{const files=[...(e.target.files||[])];e.target.value='';if(exporting)return;let imported=0;for(const file of files){if(assets.length>=40){status('Limite de 40 fichiers.');break;}if(file.size>500*1048576){status('Fichier refusé (> 500 Mo) : '+file.name);continue;}const url=URL.createObjectURL(file);try{const seconds=await metadata(url);assets.push({id:id(),name:file.name,file,url,duration:seconds});imported++;}catch(err){URL.revokeObjectURL(url);status(file.name+' : '+err.message);}}if(imported){status(imported+' fichier(s) importé(s).');refresh();}};
 function editClip(property,value){const c=clips[selection],asset=assetFor(c);if(!c||!asset||exporting)return;checkpoint();const before={...c};if(property==='start'){c.start=clamp(Number(value),0,c.end-.1);}else if(property==='end'){c.end=clamp(Number(value),c.start+.1,asset.duration);}else c[property]=value;if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||length(c)<.09){Object.assign(c,before);status('Bornes de découpage invalides.');}refresh();paintTitle(clips[active]);updateGain();}
