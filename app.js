@@ -1,4 +1,5 @@
 import {readNodeGraph} from './node-bridge.js';
+import {graphSupport,renderNodeFrame} from './node-compositor.js';
 import {normalizeEffects,motionAt,cssFilter,renderVideoFrame,PRESETS,DEFAULT_KEYFRAME} from './compositing.js';
 const $=id=>document.getElementById(id);
 const video=$('preview'),stage=$('stage'),overlay=$('titleOverlay'),music=$('musicPlayer');
@@ -31,6 +32,13 @@ function updateVideoEffects(){
  video.style.filter=cssFilter(effects.grade);
  video.style.transform=`translate(${motion.x}%,${motion.y}%) rotate(${motion.rotation}deg) scale(${motion.scale/100})`;
  video.style.opacity=String(motion.opacity/100);
+ const nodeCanvas=$('nodePreviewCanvas');
+ const supported=clip.nodeGraph&&graphSupport(clip.nodeGraph).supported;
+ nodeCanvas.hidden=!supported;
+ if(supported&&video.readyState>=2){
+  try{nodeCanvas.width=640;nodeCanvas.height=360;frame(nodeCanvas.getContext('2d'),nodeCanvas,clip,false);}
+  catch(error){nodeCanvas.hidden=true;status('Aperçu Node impossible : '+error.message);}
+ }
 }
 function showEffectValues(clip){
  const {grade,start,end}=normalizeEffects(clip?.effects);
@@ -72,9 +80,9 @@ function applyNodeGraph(envelope){
  if(exporting)throw Error('Attends la fin de l’export vidéo.');
  const imported=readNodeGraph(envelope);
  checkpoint();clip.nodeGraph=imported.envelope;
- if(imported.previewSupported){clip.effects=normalizeEffects(clip.effects);clip.effects.grade={...imported.grade};}
+ // Node effects render through the shared compositor; do not apply the grade twice.
  showEffectValues(clip);updateVideoEffects();
- const detail=imported.previewSupported?'Correction couleur appliquée et graphe conservé.':'Graphe complexe conservé ; le rendu est non pris en charge et son export est bloqué.';
+ const capability=graphSupport(imported.envelope);const detail=capability.supported?'Graphe Node actif : rendu Canvas2D en prévisualisation et en export.':'Graphe conservé sans rendu : '+capability.reason;
  status(detail);return detail;
 }
 $('nodeEffectImport').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw Error('Fichier trop volumineux.');applyNodeGraph(JSON.parse(await file.text()));}catch(err){status('Effet refusé : '+err.message);}};
@@ -158,7 +166,20 @@ async function getAudio(){
  updateGain();
 }
 function titleOnCanvas(ctx,c,width,height){if(!c.title)return;ctx.fillStyle=c.color;ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=14;ctx.textAlign='center';ctx.font='bold '+Math.round(height*.052)+'px system-ui';const words=c.title.split(/\s+/),rows=[];let row='';for(const word of words){const test=row?row+' '+word:word;if(ctx.measureText(test).width>width*.86&&row){rows.push(row);row=word;}else row=test;}if(row)rows.push(row);const lineHeight=height*.068;let y=c.position==='top'?height*.13:c.position==='center'?height/2-(rows.length-1)*lineHeight/2:height*.86-(rows.length-1)*lineHeight;for(const text of rows){ctx.fillText(text,width/2,y,width*.9);y+=lineHeight;}ctx.shadowBlur=0;}
-function frame(ctx,canvas,c){const progress=Math.max(0,Math.min(1,(video.currentTime-c.start)/Math.max(.01,length(c))));renderVideoFrame(ctx,video,canvas,c.effects,progress,$('background').value);titleOnCanvas(ctx,c,canvas.width,canvas.height);}
+function frame(ctx,canvas,c,includeTitle=true){
+ const progress=Math.max(0,Math.min(1,(video.currentTime-c.start)/Math.max(.01,length(c))));
+ if(c.nodeGraph&&graphSupport(c.nodeGraph).supported){
+  const transformed=document.createElement('canvas');transformed.width=canvas.width;transformed.height=canvas.height;
+  renderNodeFrame(c.nodeGraph,video,transformed,video.currentTime-c.start);
+  const motion=motionAt(c.effects,progress),w=canvas.width,h=canvas.height;
+  ctx.save();ctx.fillStyle=$('background').value;ctx.fillRect(0,0,w,h);
+  ctx.translate(w/2+motion.x/100*w,h/2+motion.y/100*h);
+  ctx.rotate(motion.rotation*Math.PI/180);
+  ctx.scale(motion.scale/100,motion.scale/100);ctx.globalAlpha=motion.opacity/100;
+  ctx.drawImage(transformed,-w/2,-h/2);ctx.restore();
+ }else renderVideoFrame(ctx,video,canvas,c.effects,progress,$('background').value);
+ if(includeTitle)titleOnCanvas(ctx,c,canvas.width,canvas.height);
+}
 async function validateRenderedWebM(blob){
  if(blob.size<1024)throw Error('Le WebM obtenu est anormalement petit.');
  const url=URL.createObjectURL(blob),probe=document.createElement('video');
@@ -175,7 +196,7 @@ async function validateRenderedWebM(blob){
  }finally{probe.pause();probe.removeAttribute('src');probe.load();URL.revokeObjectURL(url);}
 }
 function waitEnd(c,ctx,canvas){return new Promise((resolve,reject)=>{let done=false;const timeout=setTimeout(()=>finish(Error('Temps de lecture dépassé.')),Math.ceil(length(c)*1000+12000));function finish(error){if(done)return;done=true;clearTimeout(timeout);video.removeEventListener('error',onError);error?reject(error):resolve();}const onError=()=>finish(Error('Décodage vidéo interrompu'));video.addEventListener('error',onError);const tick=()=>{if(done)return;try{const row=boundaries()[active];if(row)audioSync(clamp(row.start+video.currentTime-c.start,0,duration),true);frame(ctx,canvas,c);if(video.currentTime>=c.end-.025||video.ended){finish();return;}if(video.paused&&!video.seeking){finish(Error('Lecture interrompue pendant l’export'));return;}requestAnimationFrame(tick);}catch(e){finish(e);}};requestAnimationFrame(tick);});}
-$('exportVideo').onclick=async()=>{if(exporting||!clips.length)return;const supports=typeof MediaRecorder!=='undefined'&&HTMLCanvasElement.prototype.captureStream;if(!supports)return status('Ce navigateur ne peut pas enregistrer une vidéo WebM.');const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));if(!mime)return status('Aucun encodeur WebM compatible.');if(duration>1800)return status('Export limité à 30 minutes pour cette version.');if(clips.some(c=>c.nodeGraph&&!readNodeGraph(c.nodeGraph).previewSupported))return status('Export bloqué : un graphe Node complexe est conservé dans le projet mais son rendu n’est pas pris en charge. Retire-le ou utilise uniquement des corrections couleur compatibles.');exporting=true;playing=false;video.pause();music.pause();$('exportVideo').disabled=true;$('mode').textContent='EXPORT EN COURS';renderInspector();updateClock();let recorder=null,stream=null;
+$('exportVideo').onclick=async()=>{if(exporting||!clips.length)return;const supports=typeof MediaRecorder!=='undefined'&&HTMLCanvasElement.prototype.captureStream;if(!supports)return status('Ce navigateur ne peut pas enregistrer une vidéo WebM.');const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));if(!mime)return status('Aucun encodeur WebM compatible.');if(duration>1800)return status('Export limité à 30 minutes pour cette version.');if(clips.some(c=>c.nodeGraph&&!graphSupport(c.nodeGraph).supported))return status('Export bloqué : un graphe Node utilise plusieurs sources ou des nœuds non pris en charge.');exporting=true;playing=false;video.pause();music.pause();$('exportVideo').disabled=true;$('mode').textContent='EXPORT EN COURS';renderInspector();updateClock();let recorder=null,stream=null;
  try{await getAudio();await audioContext.resume();if(audioTrack){const a=audioAsset();if(a){music.src=a.url;music.dataset.asset=a.id;music.load();await new Promise((resolve,reject)=>{if(music.readyState>=1)return resolve();const ok=()=>{music.removeEventListener('loadedmetadata',ok);music.removeEventListener('error',fail);resolve();},fail=()=>{music.removeEventListener('loadedmetadata',ok);music.removeEventListener('error',fail);reject(Error('Musique illisible'));};music.addEventListener('loadedmetadata',ok);music.addEventListener('error',fail);});}}const size=getFormat(),canvas=document.createElement('canvas');canvas.width=size.width;canvas.height=size.height;const ctx=canvas.getContext('2d',{alpha:false});stream=canvas.captureStream(30);for(const t of audioOutput.stream.getAudioTracks())stream.addTrack(t);const data=[];recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:Math.min(8000000,size.width*size.height*5)});const finished=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)data.push(e.data);};recorder.onerror=e=>reject(Error(e.error?.message||'Erreur d’encodage'));recorder.onstop=()=>resolve(new Blob(data,{type:mime}));});
  recorder.start(1000);
  for(let i=0;i<clips.length;i++){const c=clips[i];status('Export '+(i+1)+' / '+clips.length+' : '+(assetFor(c)?.name||'clip'));await setClip(i,0,false);audioSync(boundaries()[i].start,false);frame(ctx,canvas,c);await video.play();audioSync(boundaries()[i].start,true);await waitEnd(c,ctx,canvas);video.pause();music.pause();}
