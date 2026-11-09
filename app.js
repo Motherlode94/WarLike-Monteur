@@ -1,3 +1,4 @@
+import {installedMotionPresets,applyMotionPreset} from './motion-extension.js';
 import {readNodeGraph} from './node-bridge.js';
 import {graphSupport,renderNodeFrame} from './node-compositor.js';
 import {normalizeEffects,motionAt,cssFilter,renderVideoFrame,PRESETS,DEFAULT_KEYFRAME} from './compositing.js';
@@ -150,6 +151,9 @@ for(const key of gradeKeys){
  node.addEventListener('input',()=>{const clip=clips[selection];if(!clip||exporting)return;if(!before)before=snapshot();clip.effects=normalizeEffects(clip.effects);clip.effects.grade[key]=Number(node.value);$(name+'Value').textContent=node.value+(key==='warmth'?'':' %');updateVideoEffects();});
  node.addEventListener('change',()=>{const clip=clips[selection];if(!clip||exporting){before=null;return;}if(before){undoStack.push(before);if(undoStack.length>60)undoStack.shift();redoStack.length=0;before=null;historyButtons();}else checkpoint();clip.effects=normalizeEffects(clip.effects);clip.effects.grade[key]=Number(node.value);updateVideoEffects();});
 }
+function refreshMotionExtension(){const field=$('motionExtensionPreset'),before=field.value,presets=installedMotionPresets(localStorage);field.replaceChildren(new Option(presets.length?'Choisir un mouvement…':'Aucun pack actif',''));for(const preset of presets)field.append(new Option(preset.name,preset.id));if(presets.some(p=>p.id===before))field.value=before;}
+$('applyMotionExtension').onclick=()=>{const clip=clips[selection];if(!clip||exporting)return;const preset=installedMotionPresets(localStorage).find(p=>p.id===$('motionExtensionPreset').value);if(!preset)return status('Installe et active Mouvement Studio, puis choisis un mouvement.');checkpoint();clip.effects=applyMotionPreset(clip.effects,preset);showEffectValues(clip);updateVideoEffects();status('✓ Mouvement appliqué : '+preset.name);};
+window.addEventListener('storage',e=>{if(e.key==='warlike.extensions.v1')refreshMotionExtension()});refreshMotionExtension();
 $('fxPreset').onchange=e=>{const clip=clips[selection];if(!clip||exporting)return;checkpoint();clip.effects=normalizeEffects(clip.effects);clip.effects.grade={...PRESETS[e.target.value]};showEffectValues(clip);updateVideoEffects();};
 $('kfStart').onclick=()=>{keyframeSide='start';showEffectValues(clips[selection]);};
 $('kfEnd').onclick=()=>{keyframeSide='end';showEffectValues(clips[selection]);};
