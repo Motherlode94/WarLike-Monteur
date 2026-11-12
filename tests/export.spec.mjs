@@ -50,7 +50,18 @@ test('exports two real video clips with a separately imported audible audio trac
   const probe=JSON.parse(command('ffprobe',['-v','error','-show_streams','-show_format','-of','json',output]));
   expect(probe.streams.some(s=>s.codec_type==='video')).toBeTruthy();
   expect(probe.streams.some(s=>s.codec_type==='audio')).toBeTruthy();
-  const seconds=Number(probe.format.duration);
+  // MediaRecorder WebM often omits Segment Info Duration even when its
+  // actual audio/video packets have correct timestamps. Probe the packets
+  // rather than assuming the optional format.duration metadata is present.
+  const packets=JSON.parse(command('ffprobe',['-v','error','-show_packets','-show_entries',
+   'packet=codec_type,pts_time,duration_time','-of','json',output])).packets||[];
+  const videoPackets=packets.filter(p=>p.codec_type==='video'&&Number.isFinite(Number(p.pts_time)));
+  const audioPackets=packets.filter(p=>p.codec_type==='audio'&&Number.isFinite(Number(p.pts_time)));
+  expect(videoPackets.length).toBeGreaterThan(10);
+  expect(audioPackets.length).toBeGreaterThan(10);
+  const seconds=Number.isFinite(Number(probe.format.duration))&&Number(probe.format.duration)>0
+   ?Number(probe.format.duration)
+   :Math.max(...packets.map(p=>Number(p.pts_time)+Number(p.duration_time||0)).filter(Number.isFinite));
   expect(seconds).toBeGreaterThan(2);
   expect(seconds).toBeLessThan(7);
   // ffmpeg prints volumedetect metrics to stderr.
