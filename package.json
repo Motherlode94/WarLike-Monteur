@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test:export": "playwright test --config=playwright.config.mjs",
-    "test:unit": "node --test tests/compositing.test.mjs tests/node-bridge.test.mjs tests/motion-extension.test.mjs tests/audio-envelope.test.mjs",
+    "test:unit": "node --test tests/compositing.test.mjs tests/node-bridge.test.mjs tests/motion-extension.test.mjs tests/audio-envelope.test.mjs tests/audio-fade-presets.test.mjs",
     "test": "npm run test:unit && npm run test:export"
   },
   "devDependencies": {
