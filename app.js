@@ -195,7 +195,7 @@ function renderAudio(){
  $('audioOffset').disabled=!current||exporting;$('audioVolume').disabled=!current||exporting;$('removeAudio').disabled=!current||exporting;
  if(current){$('audioOffset').value=String(audioTrack.offset);$('audioVolume').value=String(audioTrack.volume);}
  let primaryFades=$('monteurPrimaryFades');
- if(!primaryFades){primaryFades=document.createElement('div');primaryFades.id='monteurPrimaryFades';primaryFades.className='audio-item';primaryFades.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;';$('audioDuration').insertAdjacentElement('afterend',primaryFades);}
+ if(!primaryFades){primaryFades=document.createElement('div');primaryFades.id='monteurPrimaryFades';primaryFades.className='audio-item';primaryFades.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;';$('audioClips').insertAdjacentElement('beforebegin',primaryFades);}
  primaryFades.replaceChildren();
  if(current)for(const [key,label] of [['fadeIn','Fondu entrée (s)'],['fadeOut','Fondu sortie (s)']]){
   const holder=document.createElement('label');holder.textContent=label+' ';
