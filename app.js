@@ -1,5 +1,6 @@
 import {installedMotionPresets,applyMotionPreset} from './motion-extension.js';
 import {audioTrackGain} from './audio-envelope.js';
+import {installedAudioFadePresets,applyAudioFadePreset} from './audio-fade-presets.js';
 import {readNodeGraph} from './node-bridge.js';
 import {graphSupport,renderNodeFrame} from './node-compositor.js';
 import {normalizeEffects,motionAt,cssFilter,renderVideoFrame,PRESETS,DEFAULT_KEYFRAME} from './compositing.js';
@@ -173,6 +174,19 @@ $('split').onclick=()=>{if(exporting||active<0)return;const row=boundaries()[act
  c.end=at;clips.splice(active+1,0,copy);selection=active+1;seek(clock);refresh();status('Clip coupé à '+fmt(clock)+'.');};
 
 async function audioMetadata(url){return new Promise((resolve,reject)=>{const sample=new Audio();sample.preload='metadata';sample.onloadedmetadata=()=>{const seconds=sample.duration;sample.removeAttribute('src');sample.load();Number.isFinite(seconds)&&seconds>0?resolve(seconds):reject(Error('Durée audio invalide.'));};sample.onerror=()=>reject(Error('Audio non pris en charge.'));sample.src=url;});}
+function fadePresetControls(track,duration,apply){
+ const presets=installedAudioFadePresets(localStorage);
+ if(!presets.length)return document.createDocumentFragment();
+ const box=document.createElement('label');box.textContent='Extension · fondu ';
+ const select=document.createElement('select');select.setAttribute('aria-label','Préréglage de fondu audio');
+ for(const preset of presets)select.append(new Option(preset.name,preset.id));
+ const button=document.createElement('button');button.type='button';button.textContent='Appliquer';
+ button.disabled=exporting;
+ button.onclick=()=>{const selected=presets.find(p=>p.id===select.value);if(!selected)return;
+  checkpoint();apply(applyAudioFadePreset(track,selected,duration));audioSync(clock,playing);renderAudio();
+ };
+ box.append(select,button);return box;
+}
 function renderAudio(){
  const root=$('audioClips');root.replaceChildren();const current=audioAsset();
  for(const a of audioAssets){const b=document.createElement('button');b.type='button';b.className='audio-item'+(current?.id===a.id?' selected':'');b.textContent=(current?.id===a.id?'♫ En piste · ':'＋ Ajouter · ')+a.name+' ('+fmt(a.duration)+')';b.onclick=()=>{if(exporting)return;checkpoint();if(!audioTrack){audioTrack={assetId:a.id,offset:0,volume:70};}else if(extraAudioTracks.length<12){extraAudioTracks.push({id:id(),assetId:a.id,offset:0,volume:70,muted:false});}else{status('Maximum 13 pistes audio.');return;}audioSync(clock,playing);renderAudio();};root.append(b);}
@@ -189,6 +203,7 @@ function renderAudio(){
   input.onchange=()=>{const n=Number(input.value);if(!Number.isFinite(n)||n<0||n>current.duration/2){renderAudio();return;}checkpoint();audioTrack[key]=n;audioSync(clock,playing);renderAudio();};
   holder.append(input);primaryFades.append(holder);
  }
+ if(current)primaryFades.append(fadePresetControls(audioTrack,current.duration,next=>{audioTrack=next}));
  const lane=$('extraAudioTracks');lane.replaceChildren();
  for(const track of extraAudioTracks){
   const asset=audioAssets.find(a=>a.id===track.assetId),row=document.createElement('div');row.className='audio-item';row.style.cssText='display:grid;gap:6px;padding:10px;margin:7px 0;';
@@ -204,6 +219,7 @@ function renderAudio(){
    knob.onchange=()=>{const n=Number(knob.value);if(!Number.isFinite(n)||n<0||n>(asset?.duration||0)/2){renderAudio();return;}checkpoint();track[key]=n;syncExtraAudio(clock,playing);renderAudio();};
    holder.append(knob);fades.append(holder);
   }
+  if(asset)fades.append(fadePresetControls(track,asset.duration,next=>Object.assign(track,next)));
   const mute=document.createElement('button');mute.type='button';mute.textContent=track.muted?'Réactiver':'Muet';mute.onclick=()=>{checkpoint();track.muted=!track.muted;audioSync(clock,playing);renderAudio();};
   const remove=document.createElement('button');remove.type='button';remove.textContent='Supprimer la piste';remove.onclick=()=>{checkpoint();extraAudioTracks=extraAudioTracks.filter(t=>t.id!==track.id);syncExtraAudio(clock,false);renderAudio();};
   for(const el of [offset,vol,mute,remove])el.disabled=exporting;
