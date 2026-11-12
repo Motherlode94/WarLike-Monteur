@@ -13,7 +13,7 @@ test('independent track fades smoothly without touching the audio source',()=>{
  assert.equal(audioTrackGain(track,13,10,100),0);
 });
 test('legacy audio tracks keep their unchanged volume and master gain',()=>{
- assert.equal(audioTrackGain({offset:0,volume:70},2,10,80),.56);
+ assert.ok(Math.abs(audioTrackGain({offset:0,volume:70},2,10,80)-.56)<1e-9);
  assert.equal(audioTrackGain({offset:0,volume:70,muted:true},2,10,80),0);
  assert.equal(audioTrackGain({offset:0,volume:70},10,10,80),0);
 });
