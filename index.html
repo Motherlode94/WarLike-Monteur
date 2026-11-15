@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11141c"><title>WarLike Monteur — Studio vidéo</title><link rel="stylesheet" href="./style.css"></head>
+<html data-warlike-app="warlike-monteur" lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11141c"><title>WarLike Monteur — Studio vidéo</title><link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./design-system/warlike-foundation.css?v=1.1">
+<link rel="stylesheet" href="./design-system/warlike-shell.css?v=1.1">
+</head>
 <body><div class="app">
 <header class="top"><a class="brand" href="https://warlike-hub.pages.dev/"><span class="logo">W</span><span><strong>WARLIKE</strong><small>MONTEUR / VIDEO STUDIO</small></span></a><div class="top-actions"><a href="https://warlike-hub.pages.dev/guide.html#transferts" target="_blank" rel="noopener" class="button">Aide / transferts</a><span class="pill">Projet local · 1080p max</span><button id="applyReceivedNode" type="button" disabled title="Appliquer le graphe reçu depuis WarLike Node au clip sélectionné">Appliquer effet Node reçu</button><a class="button" href="./extensions.html">Extensions</a><select id="extensionExportProfile" aria-label="Profil installé"><option value="">Profils installés…</option></select><button id="applyExportProfile" type="button">Appliquer profil</button><button id="saveProject">Exporter projet JSON</button><label class="button">Importer projet JSON<input type="file" id="projectImport" accept=".json,application/json" hidden></label><button id="exportVideo" class="primary">Exporter vidéo WebM</button></div></header>
 <div class="workspace">
